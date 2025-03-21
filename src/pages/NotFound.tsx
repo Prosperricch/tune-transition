@@ -1,5 +1,8 @@
-import { useLocation } from "react-router-dom";
+
+import { useLocation, Link } from "react-router-dom";
 import { useEffect } from "react";
+import { Home } from "lucide-react";
+import PageTransition from "@/components/PageTransition";
 
 const NotFound = () => {
   const location = useLocation();
@@ -12,15 +15,19 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">404</h1>
-        <p className="text-xl text-gray-600 mb-4">Oops! Page not found</p>
-        <a href="/" className="text-blue-500 hover:text-blue-700 underline">
-          Return to Home
-        </a>
+    <PageTransition>
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <h1 className="text-7xl font-bold mb-2">404</h1>
+        <p className="text-xl text-muted-foreground mb-8">This track doesn't exist</p>
+        <Link 
+          to="/" 
+          className="inline-flex items-center gap-2 bg-player-accent text-white px-6 py-3 rounded-full font-medium hover:bg-opacity-90 transition-colors"
+        >
+          <Home className="h-5 w-5" />
+          Return Home
+        </Link>
       </div>
-    </div>
+    </PageTransition>
   );
 };
 
