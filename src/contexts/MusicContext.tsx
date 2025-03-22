@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Capacitor } from '@capacitor/core';
@@ -209,32 +208,34 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setIsLoading(true);
     
     try {
-      // Fix: Media permissions are handled differently
       try {
         await Media.getMedias({
-          limit: 1,
-          types: 'videos'
+          types: ['videos'],
+          options: { limit: 1 }
         });
       } catch (e) {
-        console.log('Permission check triggered');
+        console.log('Permission check triggered:', e);
         // Permission likely denied or not yet granted
       }
       
       const mediaResults = await Media.getMedias({
-        types: 'all',
-        limit: 100
+        types: ['all'],
+        options: { limit: 100 }
       });
       
-      const mediaFiles = Array.isArray(mediaResults) 
-        ? mediaResults 
-        : 'items' in mediaResults 
-          ? mediaResults.items || [] 
-          : [];
+      let mediaFiles = [];
+      if (Array.isArray(mediaResults)) {
+        mediaFiles = mediaResults;
+      } else if (mediaResults && typeof mediaResults === 'object') {
+        if ('items' in mediaResults && Array.isArray(mediaResults.items)) {
+          mediaFiles = mediaResults.items;
+        }
+      }
       
       if (mediaFiles.length === 0) {
         toast({
           title: 'No Songs Found',
-          description: 'No audio files were found on your device.',
+          description: 'No media files were found on your device.',
         });
         setIsLoading(false);
         return;
@@ -242,11 +243,11 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       
       console.log('Found media files:', mediaFiles);
       
-      // Filter to only include audio files
-      const audioFiles = mediaFiles.filter(file => 
-        file.mediaType?.toLowerCase().includes('audio') || 
-        file.mimeType?.toLowerCase().includes('audio')
-      );
+      const audioFiles = mediaFiles.filter((file: any) => {
+        const mediaType = file.mediaType?.toLowerCase() || '';
+        const mimeType = file.mimeType?.toLowerCase() || '';
+        return mediaType.includes('audio') || mimeType.includes('audio');
+      });
       
       if (audioFiles.length === 0) {
         toast({
@@ -258,7 +259,7 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
       
       const deviceSongs: Song[] = await Promise.all(
-        audioFiles.map(async (file, index) => {
+        audioFiles.map(async (file: any, index: number) => {
           let filePath = file.path;
           
           if (Capacitor.getPlatform() === 'android') {
