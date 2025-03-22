@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { Capacitor } from '@capacitor/core';
@@ -35,6 +36,7 @@ interface MusicContextType {
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
 
+// Start with an empty array of songs instead of sample songs
 const sampleSongs: Song[] = [];
 
 export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -162,19 +164,21 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setIsLoading(true);
     
     try {
+      // Check permissions by attempting to get one media file
       try {
         await Media.getMedias({
           types: "videos" as any,
-          options: { limit: 1 }
+          limit: 1
         });
       } catch (e) {
         console.log('Permission check triggered:', e);
         // Permission likely denied or not yet granted
       }
       
+      // Get all media files
       const mediaResults = await Media.getMedias({
         types: "all" as any,
-        options: { limit: 100 }
+        limit: 100
       });
       
       let mediaFiles = [];
@@ -235,6 +239,7 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       
       console.log('Processed songs:', deviceSongs);
       
+      // Replace existing songs with device songs
       setSongs(deviceSongs);
       
       toast({
