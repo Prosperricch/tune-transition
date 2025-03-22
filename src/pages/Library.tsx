@@ -1,7 +1,7 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Search, FolderPlus, Loader2 } from 'lucide-react';
+import { ArrowLeft, Search, FolderPlus, Loader2, Music } from 'lucide-react';
 import { useMusic } from '@/contexts/MusicContext';
 import SongCard from '@/components/SongCard';
 import MiniPlayer from '@/components/MiniPlayer';
@@ -13,6 +13,13 @@ import { Capacitor } from '@capacitor/core';
 const Library = () => {
   const { songs, currentSong, loadSongsFromDevice, isLoading } = useMusic();
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Auto-load songs when library opens if none are loaded
+  useEffect(() => {
+    if (Capacitor.isNativePlatform() && songs.length === 0 && !isLoading) {
+      loadSongsFromDevice();
+    }
+  }, []);
   
   // Filter songs based on search query
   const filteredSongs = songs.filter(song => 
@@ -35,7 +42,7 @@ const Library = () => {
               <Link to="/" className="p-1 -ml-1 rounded-full hover:bg-white/10 transition-colors">
                 <ArrowLeft className="h-5 w-5" />
               </Link>
-              <h1 className="text-xl font-semibold">Your Library</h1>
+              <h1 className="text-xl font-semibold">Your Music</h1>
             </div>
           </div>
         </header>
@@ -46,7 +53,7 @@ const Library = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Search by song, artist or album..."
+              placeholder="Search your music..."
               className="pl-9 bg-player-muted/50 border-player-border"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -62,12 +69,12 @@ const Library = () => {
               {isLoading ? (
                 <>
                   <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                  Loading songs...
+                  Loading your music...
                 </>
               ) : (
                 <>
                   <FolderPlus className="h-5 w-5 mr-2" />
-                  Load songs from your device
+                  Refresh your music library
                 </>
               )}
             </Button>
@@ -76,29 +83,40 @@ const Library = () => {
         
         {/* Song List */}
         <main className="container max-w-md mx-auto px-6">
-          <div className="space-y-1">
-            {filteredSongs.length > 0 ? (
-              filteredSongs.map((song) => (
+          {isLoading ? (
+            <div className="py-12 text-center">
+              <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin text-player-accent" />
+              <p className="text-muted-foreground">Scanning your device for music...</p>
+            </div>
+          ) : filteredSongs.length > 0 ? (
+            <div className="space-y-1">
+              {filteredSongs.map((song) => (
                 <SongCard key={song.id} song={song} />
-              ))
-            ) : (
-              <div className="py-12 text-center">
-                <p className="text-muted-foreground">
-                  {isLoading ? 'Loading songs...' : 'No songs found'}
-                </p>
-                {!isLoading && songs.length === 0 && (
-                  <Button
-                    onClick={handleLoadSongs}
-                    className="mt-4 bg-player-accent hover:bg-player-accent/90"
-                    disabled={isLoading}
-                  >
-                    <FolderPlus className="h-5 w-5 mr-2" />
-                    Load songs
-                  </Button>
-                )}
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 text-center">
+              <div className="bg-player-muted/50 rounded-full p-6 w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                <Music className="h-8 w-8 text-muted-foreground" />
               </div>
-            )}
-          </div>
+              <h3 className="text-xl font-semibold mb-2">No music found</h3>
+              <p className="text-muted-foreground mb-6">
+                {Capacitor.isNativePlatform() 
+                  ? "We couldn't find any music on your device" 
+                  : "This app requires a mobile device to access music"}
+              </p>
+              {Capacitor.isNativePlatform() && (
+                <Button
+                  onClick={handleLoadSongs}
+                  className="bg-player-accent hover:bg-player-accent/90"
+                  disabled={isLoading}
+                >
+                  <FolderPlus className="h-5 w-5 mr-2" />
+                  Scan for music
+                </Button>
+              )}
+            </div>
+          )}
         </main>
         
         {/* Mini Player */}

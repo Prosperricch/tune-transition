@@ -35,53 +35,7 @@ interface MusicContextType {
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
 
-const sampleSongs: Song[] = [
-  {
-    id: '1',
-    title: 'Morning Dew',
-    artist: 'James Wilson',
-    album: 'Nature Sounds',
-    duration: 217,
-    artwork: '/lovable-uploads/e115393c-28eb-4194-a2a5-29bdb709ceb7.png',
-    audioSrc: 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8e0070a42.mp3?filename=lofi-study-112191.mp3',
-  },
-  {
-    id: '2',
-    title: 'Cosmic Waves',
-    artist: 'Stella Nova',
-    album: 'Space Dreams',
-    duration: 184,
-    artwork: 'https://images.unsplash.com/photo-1614149162883-504ce4d13909?q=80&w=1974&auto=format&fit=crop',
-    audioSrc: 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0c6ff1edf.mp3?filename=electronic-future-beats-117997.mp3',
-  },
-  {
-    id: '3',
-    title: 'Urban Rhythm',
-    artist: 'Metro Beats',
-    album: 'City Life',
-    duration: 243,
-    artwork: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?q=80&w=2070&auto=format&fit=crop',
-    audioSrc: 'https://cdn.pixabay.com/download/audio/2022/10/25/audio_55f8d63197.mp3?filename=chill-hop-lo-fi-131912.mp3',
-  },
-  {
-    id: '4',
-    title: 'Sunset Melody',
-    artist: 'Ocean Sounds',
-    album: 'Beach Vibes',
-    duration: 198,
-    artwork: 'https://images.unsplash.com/photo-1549638441-b787d2e11f14?q=80&w=2070&auto=format&fit=crop',
-    audioSrc: 'https://cdn.pixabay.com/download/audio/2023/04/21/audio_00ed349289.mp3?filename=lofi-chill-medium-version-159459.mp3',
-  },
-  {
-    id: '5',
-    title: 'Midnight Jazz',
-    artist: 'Blue Notes',
-    album: 'Late Hours',
-    duration: 227,
-    artwork: 'https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?q=80&w=2070&auto=format&fit=crop',
-    audioSrc: 'https://cdn.pixabay.com/download/audio/2022/01/13/audio_5644bed928.mp3?filename=best-time-112194.mp3',
-  }
-];
+const sampleSongs: Song[] = [];
 
 export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [songs, setSongs] = useState<Song[]>(sampleSongs);
@@ -210,7 +164,7 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     try {
       try {
         await Media.getMedias({
-          types: ['videos'],
+          types: "videos" as any,
           options: { limit: 1 }
         });
       } catch (e) {
@@ -219,7 +173,7 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
       
       const mediaResults = await Media.getMedias({
-        types: ['all'],
+        types: "all" as any,
         options: { limit: 100 }
       });
       
@@ -281,7 +235,7 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       
       console.log('Processed songs:', deviceSongs);
       
-      setSongs([...deviceSongs, ...sampleSongs]);
+      setSongs(deviceSongs);
       
       toast({
         title: 'Songs Loaded',

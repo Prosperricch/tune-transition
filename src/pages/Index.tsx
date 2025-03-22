@@ -6,13 +6,20 @@ import MusicControls from '@/components/MusicControls';
 import MiniPlayer from '@/components/MiniPlayer';
 import PageTransition from '@/components/PageTransition';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Capacitor } from '@capacitor/core';
 
 const Index = () => {
   const { currentSong, isPlaying, loadSongsFromDevice, songs } = useMusic();
   const [imageLoaded, setImageLoaded] = useState(false);
+  
+  // Auto-load songs when app starts on a mobile device
+  useEffect(() => {
+    if (Capacitor.isNativePlatform() && songs.length === 0) {
+      loadSongsFromDevice();
+    }
+  }, []);
   
   return (
     <PageTransition>
@@ -77,11 +84,11 @@ const Index = () => {
               <div className="bg-player-muted/50 rounded-full p-6 mb-6">
                 <Music className="h-12 w-12 text-muted-foreground" />
               </div>
-              <h2 className="text-2xl font-bold mb-2">No track selected</h2>
+              <h2 className="text-2xl font-bold mb-2">Your Music Library</h2>
               <p className="text-muted-foreground mb-6">
-                {songs.length === 0 && Capacitor.isNativePlatform()
-                  ? "Load songs from your device to start listening"
-                  : "Select a song from your library to start playing"}
+                {Capacitor.isNativePlatform()
+                  ? "We'll load your device's music. Tap below to get started."
+                  : "This app is designed to work on mobile devices."}
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4">
@@ -91,7 +98,7 @@ const Index = () => {
                     className="inline-flex items-center gap-2 bg-player-accent text-white px-6 py-3 rounded-full font-medium hover:bg-opacity-90 transition-colors"
                   >
                     <FolderPlus className="h-5 w-5" />
-                    Load My Songs
+                    Load My Music
                   </Button>
                 )}
                 
@@ -100,7 +107,7 @@ const Index = () => {
                   className="inline-flex items-center gap-2 bg-player-accent text-white px-6 py-3 rounded-full font-medium hover:bg-opacity-90 transition-colors"
                 >
                   <Library className="h-5 w-5" />
-                  Browse Library
+                  Go to Library
                 </Link>
               </div>
             </div>
