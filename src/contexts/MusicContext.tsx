@@ -168,7 +168,7 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       try {
         await Media.getMedias({
           types: "videos" as any,
-          limit: 1
+          options: { limit: 1 }
         });
       } catch (e) {
         console.log('Permission check triggered:', e);
@@ -178,7 +178,7 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       // Get all media files
       const mediaResults = await Media.getMedias({
         types: "all" as any,
-        limit: 100
+        options: { limit: 100 }
       });
       
       let mediaFiles = [];
