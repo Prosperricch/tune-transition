@@ -1,15 +1,17 @@
 
 import { Link } from 'react-router-dom';
-import { Music, Library } from 'lucide-react';
+import { Music, Library, FolderPlus } from 'lucide-react';
 import { useMusic } from '@/contexts/MusicContext';
 import MusicControls from '@/components/MusicControls';
 import MiniPlayer from '@/components/MiniPlayer';
 import PageTransition from '@/components/PageTransition';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Capacitor } from '@capacitor/core';
 
 const Index = () => {
-  const { currentSong, isPlaying } = useMusic();
+  const { currentSong, isPlaying, loadSongsFromDevice, songs } = useMusic();
   const [imageLoaded, setImageLoaded] = useState(false);
   
   return (
@@ -38,7 +40,7 @@ const Index = () => {
                     src={currentSong.artwork}
                     alt={`${currentSong.title} by ${currentSong.artist}`}
                     className={cn(
-                      "w-full h-full object-cover shadow-2xl transition-opacity duration-500",
+                      "w-full h-full object-cover shadow-2xl transition-opacity duration-500 rounded-xl",
                       imageLoaded ? "opacity-100" : "opacity-0"
                     )}
                     onLoad={() => setImageLoaded(true)}
@@ -76,14 +78,31 @@ const Index = () => {
                 <Music className="h-12 w-12 text-muted-foreground" />
               </div>
               <h2 className="text-2xl font-bold mb-2">No track selected</h2>
-              <p className="text-muted-foreground mb-6">Select a song from your library to start playing</p>
-              <Link
-                to="/library"
-                className="inline-flex items-center gap-2 bg-player-accent text-white px-6 py-3 rounded-full font-medium hover:bg-opacity-90 transition-colors"
-              >
-                <Library className="h-5 w-5" />
-                Browse Library
-              </Link>
+              <p className="text-muted-foreground mb-6">
+                {songs.length === 0 && Capacitor.isNativePlatform()
+                  ? "Load songs from your device to start listening"
+                  : "Select a song from your library to start playing"}
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4">
+                {Capacitor.isNativePlatform() && (
+                  <Button
+                    onClick={loadSongsFromDevice}
+                    className="inline-flex items-center gap-2 bg-player-accent text-white px-6 py-3 rounded-full font-medium hover:bg-opacity-90 transition-colors"
+                  >
+                    <FolderPlus className="h-5 w-5" />
+                    Load My Songs
+                  </Button>
+                )}
+                
+                <Link
+                  to="/library"
+                  className="inline-flex items-center gap-2 bg-player-accent text-white px-6 py-3 rounded-full font-medium hover:bg-opacity-90 transition-colors"
+                >
+                  <Library className="h-5 w-5" />
+                  Browse Library
+                </Link>
+              </div>
             </div>
           )}
         </main>

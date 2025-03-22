@@ -1,6 +1,8 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { toast } from '@/components/ui/use-toast';
+import { Capacitor } from '@capacitor/core';
+import { FileSystem, Directory } from '@capacitor/filesystem';
+import { Media, MediaFile } from '@capacitor-community/media';
 
 export interface Song {
   id: string;
@@ -10,6 +12,7 @@ export interface Song {
   duration: number;
   artwork: string;
   audioSrc: string;
+  filePath?: string;
 }
 
 interface MusicContextType {
@@ -26,11 +29,12 @@ interface MusicContextType {
   previous: () => void;
   seek: (time: number) => void;
   setVolumeLevel: (level: number) => void;
+  loadSongsFromDevice: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const MusicContext = createContext<MusicContextType | undefined>(undefined);
 
-// Sample song data
 const sampleSongs: Song[] = [
   {
     id: '1',
@@ -87,6 +91,7 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(0.7);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const audio = new Audio();
@@ -94,47 +99,79 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setAudioElement(audio);
 
     const updateTime = () => setCurrentTime(audio.currentTime);
-    const updateDuration = () => setDuration(audio.duration);
+    const updateDuration = () => {
+      if (!isNaN(audio.duration)) {
+        setDuration(audio.duration);
+      }
+    };
     const handleEnded = () => {
       next();
+    };
+    
+    const handleError = (e: ErrorEvent) => {
+      console.error('Audio playback error:', e);
+      toast({
+        title: 'Playback Error',
+        description: 'There was an error playing this song. Please try another one.',
+        variant: 'destructive',
+      });
+      setIsPlaying(false);
     };
 
     audio.addEventListener('timeupdate', updateTime);
     audio.addEventListener('loadedmetadata', updateDuration);
     audio.addEventListener('ended', handleEnded);
+    audio.addEventListener('error', handleError as EventListener);
 
     return () => {
       audio.pause();
       audio.removeEventListener('timeupdate', updateTime);
       audio.removeEventListener('loadedmetadata', updateDuration);
       audio.removeEventListener('ended', handleEnded);
+      audio.removeEventListener('error', handleError as EventListener);
     };
   }, []);
 
-  // Load the song when currentSong changes
   useEffect(() => {
     if (!audioElement || !currentSong) return;
     
-    // Set the audio source to the selected song
-    audioElement.src = currentSong.audioSrc;
-    
-    // Load the audio
-    audioElement.load();
-    
-    // Play the audio if isPlaying is true
-    if (isPlaying) {
-      audioElement.play().catch((error) => {
-        console.error('Error playing audio:', error);
+    const loadAndPlay = async () => {
+      try {
+        if (currentSong.filePath && Capacitor.isNativePlatform()) {
+          const fileUri = currentSong.filePath;
+          audioElement.src = fileUri;
+        } else {
+          audioElement.src = currentSong.audioSrc;
+        }
+        
+        audioElement.load();
+        
+        if (isPlaying) {
+          try {
+            await audioElement.play();
+          } catch (error) {
+            console.error('Error playing audio:', error);
+            setIsPlaying(false);
+            toast({
+              title: 'Playback Error',
+              description: 'Unable to play this track. Please try another one.',
+              variant: 'destructive',
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error setting up audio source:', error);
         toast({
           title: 'Error',
-          description: 'Unable to play this track. Please try another one.',
+          description: 'Unable to load this track. Please try another one.',
           variant: 'destructive',
         });
-      });
-    }
+      }
+    };
+    
+    loadAndPlay();
   }, [currentSong, audioElement]);
 
-  // Update audio playback when isPlaying changes
   useEffect(() => {
     if (!audioElement) return;
     
@@ -142,28 +179,110 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       audioElement.play().catch((error) => {
         console.error('Error playing audio:', error);
         setIsPlaying(false);
+        toast({
+          title: 'Playback Error',
+          description: 'Unable to play this track. Please try another one.',
+          variant: 'destructive',
+        });
       });
     } else {
       audioElement.pause();
     }
   }, [isPlaying, audioElement]);
 
-  // Update volume when it changes
   useEffect(() => {
     if (audioElement) {
       audioElement.volume = volume;
     }
   }, [volume, audioElement]);
 
+  const loadSongsFromDevice = async () => {
+    if (!Capacitor.isNativePlatform()) {
+      toast({
+        title: 'Device Access',
+        description: 'This feature is only available on mobile devices.',
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const { granted } = await Media.requestPermissions();
+      
+      if (!granted) {
+        toast({
+          title: 'Permission Denied',
+          description: 'Cannot access your media files without permission.',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      const mediaFiles = await Media.getMedias({
+        types: ['audio'],
+        limit: 100
+      });
+      
+      if (mediaFiles.length === 0) {
+        toast({
+          title: 'No Songs Found',
+          description: 'No audio files were found on your device.',
+        });
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log('Found media files:', mediaFiles);
+      
+      const deviceSongs: Song[] = await Promise.all(
+        mediaFiles.map(async (file: MediaFile, index) => {
+          let filePath = file.path;
+          
+          if (Capacitor.getPlatform() === 'android') {
+            filePath = Capacitor.convertFileSrc(file.path);
+          }
+          
+          return {
+            id: `device-${index}-${file.id || Date.now()}`,
+            title: file.name || 'Unknown Title',
+            artist: file.artist || 'Unknown Artist',
+            album: file.album || 'Unknown Album',
+            duration: file.duration || 0,
+            artwork: file.thumbnail || '/lovable-uploads/e115393c-28eb-4194-a2a5-29bdb709ceb7.png',
+            audioSrc: '',
+            filePath: filePath,
+          };
+        })
+      );
+      
+      console.log('Processed songs:', deviceSongs);
+      
+      setSongs([...deviceSongs, ...sampleSongs]);
+      
+      toast({
+        title: 'Songs Loaded',
+        description: `Loaded ${deviceSongs.length} songs from your device.`,
+      });
+    } catch (error) {
+      console.error('Error loading songs from device:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load songs from your device. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const play = (song?: Song) => {
     if (song) {
-      // If a song is provided, set it as the current song
       setCurrentSong(song);
     } else if (currentSong) {
-      // If no song is provided but there is a current song, play it
       setIsPlaying(true);
     } else if (songs.length > 0) {
-      // If no current song, set the first song as current
       setCurrentSong(songs[0]);
     }
     setIsPlaying(true);
@@ -231,6 +350,8 @@ export const MusicProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     previous,
     seek,
     setVolumeLevel,
+    loadSongsFromDevice,
+    isLoading,
   };
 
   return <MusicContext.Provider value={value}>{children}</MusicContext.Provider>;

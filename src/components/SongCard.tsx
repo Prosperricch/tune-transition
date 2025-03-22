@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Play, Pause } from 'lucide-react';
+import { Play, Pause, Music } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMusic, Song } from '@/contexts/MusicContext';
 import MusicWaveAnimation from './MusicWaveAnimation';
@@ -15,6 +15,7 @@ interface SongCardProps {
 const SongCard = ({ song, className, compact = false }: SongCardProps) => {
   const { currentSong, isPlaying, toggle, play, pause } = useMusic();
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   
   const isActive = currentSong?.id === song.id;
   
@@ -30,9 +31,15 @@ const SongCard = ({ song, className, compact = false }: SongCardProps) => {
   };
   
   const formatTime = (seconds: number) => {
+    if (!seconds || isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  const handleImageError = () => {
+    setImageError(true);
+    setImageLoaded(true);
   };
 
   return (
@@ -49,18 +56,27 @@ const SongCard = ({ song, className, compact = false }: SongCardProps) => {
         'relative overflow-hidden rounded-md',
         compact ? 'h-10 w-10' : 'h-16 w-16'
       )}>
-        <img
-          src={song.artwork}
-          alt={`${song.title} by ${song.artist}`}
-          className={cn(
-            'h-full w-full object-cover transition-opacity duration-300',
-            imageLoaded ? 'opacity-100' : 'opacity-0'
-          )}
-          onLoad={() => setImageLoaded(true)}
-        />
-        {!imageLoaded && (
+        {!imageError ? (
+          <img
+            src={song.artwork}
+            alt={`${song.title} by ${song.artist}`}
+            className={cn(
+              'h-full w-full object-cover transition-opacity duration-300',
+              imageLoaded ? 'opacity-100' : 'opacity-0'
+            )}
+            onLoad={() => setImageLoaded(true)}
+            onError={handleImageError}
+          />
+        ) : (
+          <div className="h-full w-full flex items-center justify-center bg-player-muted">
+            <Music className="h-6 w-6 text-player-accent/60" />
+          </div>
+        )}
+        
+        {!imageLoaded && !imageError && (
           <div className="absolute inset-0 bg-player-muted animate-pulse" />
         )}
+        
         <button
           onClick={handlePlayPause}
           className={cn(
@@ -91,11 +107,11 @@ const SongCard = ({ song, className, compact = false }: SongCardProps) => {
           )}
         </div>
         <p className="text-sm text-muted-foreground truncate">
-          {song.artist}
+          {song.artist || 'Unknown Artist'}
         </p>
         {!compact && (
           <p className="text-xs text-muted-foreground mt-1">
-            {song.album} • {formatTime(song.duration)}
+            {song.album || 'Unknown Album'} • {formatTime(song.duration)}
           </p>
         )}
       </div>
